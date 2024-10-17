@@ -1,0 +1,42 @@
+.select-container {
+    padding: 20px;
+  }
+  
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .food-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+  }
+  
+  .food-item {
+    background-color: #f4f4f4;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 10px;
+    transition: transform 0.2s;
+  }
+  
+  .food-item:hover {
+    transform: scale(1.05);
+  }
+  
+  .food-item img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+  
+  .message {
+    text-align: center;
+    margin-top: 20px;
+    color: green;
+  }
+  
