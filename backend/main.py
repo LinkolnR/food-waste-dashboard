@@ -1,4 +1,5 @@
-from fastapi import FastAPI, WebSocket, Request, Form, Depends, WebSocketDisconnect
+from typing import Optional
+from fastapi import FastAPI, WebSocket, Request, Form, Depends, WebSocketDisconnect, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,7 @@ from datetime import datetime
 import serial
 import time
 import threading
+
 
 # Configurações de serial
 porta_serial = 'COM9'
@@ -149,6 +151,45 @@ async def get_graph_data(db: SessionLocal = Depends(get_db)):
     data = [result.total_weight for result in results]
 
     return JSONResponse(content={"labels": labels, "data": data})
+
+# Função para filtro por data
+@app.get("/food-waste/filter-by-date")
+async def filter_by_date(
+    start_date: datetime = Query(..., description="Data de início do filtro"),
+    end_date: datetime = Query(..., description="Data de término do filtro"),
+    db: SessionLocal = Depends(get_db)
+):
+    # Busca leituras no intervalo de data
+    readings = db.query(FoodReading).filter(
+        FoodReading.date >= start_date,
+        FoodReading.date <= end_date
+    ).all()
+    
+    # Verifica se há resultados
+    if not readings:
+        return JSONResponse(
+            content={
+                "total_weight": 0,
+                "total_value": 0,
+                "total_transactions": 0,
+                "message": "Nenhum registro encontrado no intervalo especificado."
+            },
+            status_code=404
+        )
+    
+    # Calcula o resumo dos dados filtrados, ignorando valores None
+    total_weight = sum(reading.weight for reading in readings if reading.weight is not None)
+    total_value = sum((reading.weight or 0) * (reading.food.price or 0) for reading in readings if reading.food)
+    total_transactions = len(readings)
+
+    # Retorna os dados no formato JSON similar ao `get_summary`
+    return JSONResponse(content={
+        "total_weight": total_weight,
+        "total_value": total_value,
+        "total_transactions": total_transactions
+    })
+
+
 
 # Função para ler dados da balança
 def ler_dados_balança():

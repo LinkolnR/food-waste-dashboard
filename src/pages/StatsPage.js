@@ -1,19 +1,19 @@
-// src/pages/StatsPage.js
 import React, { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { useFood } from '../FoodContext';
 import './StatsPage.css';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 ChartJS.register(...registerables);
-console.log("ENTROU NESTE SEGUNDO CARALHITOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
 const StatsPage = () => {
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [endDate, setEndDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
   const [summary, setSummary] = useState({ total_value: 0, total_weight: 0, total_transactions: 0 });
   const [graphData, setGraphData] = useState({ labels: [], data: [] });
-  const { shouldUpdate, setShouldUpdate } = useFood();
-  const [socketState, setSocketState] = useState(0); // Mudando para um número
-
+  const [socketState, setSocketState] = useState(0);
 
   const fetchSummary = async () => {
     try {
@@ -35,31 +35,36 @@ const StatsPage = () => {
     }
   };
 
+  const handleDateChange = async () => {
+    try {
+      const startISO = startDate.toISOString().slice(0, 19); // Pega até segundos no formato ISO
+      const endISO = endDate.toISOString().slice(0, 19);
+      console.log(" aqui las datas")
+      console.log(startISO, endISO);
+      const response = await fetch(
+        `http://127.0.0.1:8000/food-waste/filter-by-date?start_date=${startISO}&end_date=${endISO}`
+      );
+      const data = await response.json();
+      console.log("aqui o data")
+      console.log(data)
+      setSummary(data);
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+    }
+  };
+
   useEffect(() => {
-    console.log("CARREGANDO AS INFOOS")
     fetchSummary();
     fetchGraphData();
   }, [socketState]);
 
   useEffect(() => {
     const socket = new WebSocket('ws://127.0.0.1:8000/ws/updates');
-    console.log("ENTROU NESTE PRIMEIRO CARALHIT")
+    socket.onmessage = () => setSocketState((prev) => prev + 1);
+    socket.onerror = (error) => console.error('WebSocket error:', error);
 
-    socket.onmessage = (event) => {
-
-      setSocketState(prev => prev + 1);
-
-    };
-  
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-  
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, []);
-
 
   const dataBar = {
     labels: graphData.labels,
@@ -88,6 +93,22 @@ const StatsPage = () => {
     <div className="dashboard-container">
       <div className="header">
         <h1>Dashboard Desperdício</h1>
+      </div>
+
+      <div className="date-picker-container">
+        <label>Data de Início:</label>
+        <DatePicker
+          selected={startDate}
+          onChange={(date) => setStartDate(date)}
+          dateFormat="yyyy-MM-dd"
+        />
+        <label>Data de Fim:</label>
+        <DatePicker
+          selected={endDate}
+          onChange={(date) => setEndDate(date)}
+          dateFormat="yyyy-MM-dd"
+        />
+        <button onClick={handleDateChange}>Buscar</button>
       </div>
 
       <div className="stats-grid">
