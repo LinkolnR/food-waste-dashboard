@@ -226,8 +226,18 @@ const SelectPage = () => {
       {feedbackStatus && (
         <div className={`feedback-container ${feedbackStatus}`}>
           {feedbackStatus === 'loading' && <div className="spinner"></div>}
-          {feedbackStatus === 'success' && <div className="icon success">✓</div>}
-          {feedbackStatus === 'error' && <div className="icon error">✕</div>}
+          {feedbackStatus === 'success' && (
+            <>
+              <div className="icon success">✓</div>
+              <div className="message">Sucesso! Ação realizada com sucesso.</div>
+            </>
+          )}
+          {feedbackStatus === 'error' && (
+            <>
+              <div className="icon error">✕</div>
+              <div className="message">Erro! Não foi possível realizar a ação.</div>
+            </>
+          )}
         </div>
       )}
     </div>

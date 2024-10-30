@@ -125,7 +125,7 @@ select,
   padding: 10px 15px; /* Adiciona espaçamento interno */
   align-self: flex-start; /* Alinha o botão ao início (à esquerda) */
   cursor: pointer; /* Muda o cursor ao passar o mouse sobre o botão */
-  background-color: #007bff; /* Cor de fundo do botão */
+  background-color: #4fa430; /* Cor de fundo do botão */
   color: white; /* Cor do texto */
   border: none; /* Remove borda padrão */
   border-radius: 5px; /* Borda arredondada */
@@ -134,5 +134,24 @@ select,
 }
 
 .submit-button:hover {
-  background-color: #0056b3; /* Cor ao passar o mouse */
+  background-color: #298417; /* Cor ao passar o mouse */
 }
+
+.feedback {
+  padding: 10px;
+  margin: 20px 0;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.success {
+  background-color: rgba(42, 190, 47, 0.1);
+  color: #4CAF50;
+}
+
+.error {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #F44336;
+}
+
+

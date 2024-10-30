@@ -1,120 +1,114 @@
+/* Contêiner principal */
 .select-container {
-    padding: 20px;
-  }
-  
-  h1 {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .food-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 20px;
-  }
-  
-  .food-item {
-    background-color: #f4f4f4;
-    padding: 10px;
-    border: none;
-    cursor: pointer;
-    text-align: center;
-    border-radius: 10px;
-    transition: transform 0.2s;
-  }
-  
-  .food-item:hover {
-    transform: scale(1.05);
-  }
-  
-  .food-item img {
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-  
-  .message {
-    text-align: center;
-    margin-top: 20px;
-    color: green;
-  }
-  
+  padding: 20px;
+}
 
-/* SelectPage.css */
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
 
+/* Grid Responsiva */
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(25%, 1fr)); /* Tamanho mínimo maior para responsividade */
+  gap: 20px;
+  justify-items: center; /* Centraliza os itens no grid */
+}
+
+/* Itens do Grid de Comida */
+.food-item {
+  background-color: #f4f4f4;
+  padding: 15px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 12px;
+  transition: transform 0.2s;
+  max-width: 100%;
+}
+
+.food-item:hover {
+  transform: scale(1.05);
+}
+
+/* Imagens de Comida Responsivas */
+.food-item img {
+  width: 100%;
+  max-width: 90vw; /* Limite máximo de 90% da largura da tela */
+  height: auto; /* Ajusta a altura proporcionalmente */
+  object-fit: cover; /* Cobre todo o espaço disponível sem distorcer */
+  border-radius: 10px;
+}
+
+/* Mensagem */
+.message {
+  text-align: center;
+  margin-top: 20px;
+  color: rgb(255, 255, 255);
+}
+
+/* Feedback Container */
 .feedback-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px;
-  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px 40px;
+  border-radius: 8px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  font-size: 2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
   color: white;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  text-align: center;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .feedback-container.loading {
-  background-color: #ffc107;
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 .feedback-container.success {
-  background-color: #28a745;
-  animation: pop 0.5s forwards;
+  background-color: rgba(76, 175, 80, 0.9);
 }
 
 .feedback-container.error {
-  background-color: #dc3545;
-  animation: pop 0.5s forwards;
+  background-color: rgba(244, 67, 54, 0.9);
 }
 
-/* Animação de pop */
-@keyframes pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+.feedback-container .icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: white;
+}
+.feedback-container .message{
+  color: #FFFFFF; 
 }
 
-/* Ícones */
-.icon.success {
-  font-weight: bold;
-}
-
-.icon.error {
-  font-weight: bold;
-}
-
-/* Spinner para carregamento */
 .spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
+  width: 30px;
+  height: 30px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
+  to {
     transform: rotate(360deg);
+  }
+}
+
+/* Ajustes para telas menores */
+@media (max-width: 768px) {
+  .food-item img {
+    max-width: 80vw; /* Reduz o tamanho máximo em telas menores */
   }
 }

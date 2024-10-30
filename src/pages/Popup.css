@@ -1,40 +1,89 @@
-/* Popup.css */
-
+/* Estilo do Overlay do Popup */
 .popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5); /* Fundo semitransparente */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000; /* Certifique-se de que seja maior que qualquer z-index da página */
-  }
-  
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro com transparência */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Estilo do Conteúdo do Popup */
+.popup-content {
+  background-color: #fff; /* Fundo branco */
+  border-radius: 10px;
+  padding: 60px; /* Aumenta o padding para mais espaço */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Sombra suave e maior */
+  text-align: center;
+  width: 500px; /* Largura fixa para o popup */
+  max-width: 90%; /* Para ser responsivo */
+}
+
+/* Título do Popup */
+.popup-content h2 {
+  font-size: 1.8rem; /* Aumenta o tamanho da fonte do título */
+  margin-bottom: 20px; /* Espaçamento inferior */
+}
+
+/* Linha de Botões */
+.button-row {
+  display: flex;
+  justify-content: space-between; /* Espaçamento entre os botões */
+  margin-bottom: 20px; /* Espaçamento inferior */
+}
+
+/* Estilo dos Botões de Ação */
+.action-button {
+  flex: 1; /* Faz com que os botões ocupem o mesmo espaço */
+  margin: 0 10px; /* Espaçamento lateral entre os botões */
+  padding: 20px; /* Aumenta o padding dos botões */
+  border: none;
+  border-radius: 20px; /* Bordas arredondadas */
+  background-color: #4caf50; /* Cor de fundo verde */
+  color: white; /* Cor do texto */
+  cursor: pointer;
+  font-size: 1.2rem; /* Aumenta o tamanho da fonte dos botões */
+  transition: background-color 0.3s; /* Transição para a cor de fundo */
+}
+
+/* Efeito de Hover nos Botões de Ação */
+.action-button:hover {
+  background-color: #45a049; /* Escurece o verde no hover */
+}
+
+/* Estilo do Botão de Fechar */
+.close-button {
+  padding: 20px; /* Aumenta o padding do botão de fechar */
+  border: none;
+  border-radius: 20px; /* Bordas arredondadas */
+  background-color: #f44336; /* Cor de fundo vermelho */
+  color: white; /* Cor do texto */
+  cursor: pointer;
+  font-size: 1.2rem; /* Aumenta o tamanho da fonte do botão de fechar */
+  transition: background-color 0.3s; /* Transição para a cor de fundo */
+}
+
+/* Efeito de Hover no Botão de Fechar */
+.close-button:hover {
+  background-color: #d32f2f; /* Escurece o vermelho no hover */
+}
+
+/* Media Queries para Responsividade */
+@media (max-width: 600px) {
   .popup-content {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 400px;
-    width: 100%;
-    text-align: center;
-    z-index: 1001;
+    padding: 40px; /* Menos padding em telas pequenas */
   }
-  
-  .select-container {
-    position: relative; /* Isso permite que o overlay do PopUp apareça acima */
-    z-index: 1; /* O z-index menor garante que o PopUp se sobreponha */
+
+  .popup-content h2 {
+    font-size: 1.5rem; /* Menor tamanho da fonte do título */
   }
-  
-  button.food-item {
-    cursor: pointer;
-    background: none;
-    border: none;
-    text-align: center;
-    display: inline-block;
-    margin: 10px;
-    padding: 10px;
+
+  .action-button, .close-button {
+    padding: 15px; /* Ajusta o padding dos botões em telas pequenas */
+    font-size: 1rem; /* Tamanho de fonte reduzido para botões */
   }
-  
+}
