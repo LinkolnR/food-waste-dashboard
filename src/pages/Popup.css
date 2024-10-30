@@ -1,0 +1,40 @@
+/* Popup.css */
+
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Fundo semitransparente */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000; /* Certifique-se de que seja maior que qualquer z-index da página */
+  }
+  
+  .popup-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    z-index: 1001;
+  }
+  
+  .select-container {
+    position: relative; /* Isso permite que o overlay do PopUp apareça acima */
+    z-index: 1; /* O z-index menor garante que o PopUp se sobreponha */
+  }
+  
+  button.food-item {
+    cursor: pointer;
+    background: none;
+    border: none;
+    text-align: center;
+    display: inline-block;
+    margin: 10px;
+    padding: 10px;
+  }
+  

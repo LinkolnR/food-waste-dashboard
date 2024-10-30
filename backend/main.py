@@ -1,15 +1,19 @@
-from typing import Optional
-from fastapi import FastAPI, WebSocket, Request, Form, Depends, WebSocketDisconnect, Query
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, RedirectResponse
+# main.py
+from http.client import HTTPException
+from fastapi import FastAPI, WebSocket, Depends, Query, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, func
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from database import engine, get_db, initialize_data
+from models import Base, Food, Reason, Transaction
 from datetime import datetime
-import serial
-import time
 import threading
+import serial
+from typing import Optional
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 
 # Configurações de serial
@@ -23,6 +27,7 @@ tamanho_leitura = 7
 ultimo_dado_balança = None
 executando = True
 
+# Inicializa a aplicação
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -34,42 +39,19 @@ app.add_middleware(
 
 # Inicializa os templates do Jinja2
 templates = Jinja2Templates(directory="templates")
-
-# Configuração do SQLAlchemy
-DATABASE_URL = "sqlite:///./food_data.db"  
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# Modelos de tabela
-class Food(Base):
-    __tablename__ = "foods"
-    food_id = Column(Integer, primary_key=True, index=True)
-    food_name = Column(String, unique=True, index=True)
-    price = Column(Float)
-
-class FoodReading(Base):
-    __tablename__ = "food_readings"
-    id = Column(Integer, primary_key=True, index=True)
-    food_id = Column(Integer, ForeignKey("foods.food_id"))
-    weight = Column(Float)
-    date = Column(DateTime, default=datetime.utcnow)
-    food = relationship("Food")
-
 # Criação das tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
+# Inicializa dados para tabelas Food e Reason
+db = next(get_db())  # Corrigido para utilizar next() em vez de with
+initialize_data(db)  # Chama a função de inicialização dos dados
+
+# Modelo Pydantic para dados de alimentos
 class FoodItem(BaseModel):
     foodId: int
-    foodName: str
     foodPrice: float
+    motivoId: int
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # Gerencia a conexão WebSocket e atualizações
 class ConnectionManager:
@@ -87,6 +69,7 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
+
 manager = ConnectionManager()
 
 # Rota WebSocket para atualizações em tempo real
@@ -99,19 +82,22 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-# Função para processar e salvar as leituras
-@app.post("/submit")
-async def submit_form(food_item: FoodItem, db: SessionLocal = Depends(get_db)):
-    food_id = food_item.foodId
-    food_name = food_item.foodName
-    food_price = food_item.foodPrice
 
-    if ultimo_dado_balança is not None:
+# Função para processar e salvar as leituras de alimentos
+@app.post("/submit")
+async def submit_form(food_item: FoodItem, db: Session = Depends(get_db)):
+    print(food_item)
+    food_id = food_item.foodId
+    food_price = food_item.foodPrice
+    motivo_id = food_item.motivoId
+
+    # Verifica se o dado da balança foi recebido corretamente
+    if ultimo_dado_balança:
         reading = int(ultimo_dado_balança) / 100
     else:
-        reading = 10.52
+        reading = 10.00
 
-    # Verifica se o item de comida já existe, senão cria
+    # Verifica se o item de comida já existe, senão cria um novo
     food = db.query(Food).filter(Food.food_id == food_id).first()
     if not food:
         food = Food(food_id=food_id, food_name=food_name, price=food_price)
@@ -119,52 +105,118 @@ async def submit_form(food_item: FoodItem, db: SessionLocal = Depends(get_db)):
         db.commit()
         db.refresh(food)
     
-    new_reading = FoodReading(food_id=food.food_id, weight=reading)
+    # Verifica se o motivo já existe
+    reason = db.query(Reason).filter(Reason.reason_id == motivo_id).first()
+    if not reason:
+        return JSONResponse(
+            content={"message": "Motivo não encontrado."},
+            status_code=400
+        )
+
+    # Cria uma nova transação (leitura) com o motivo associado
+    new_reading = Transaction(
+        food_id=food.food_id,
+        reason_id=reason.reason_id,
+        weight=reading,
+        date=datetime.utcnow(),
+    )
     db.add(new_reading)
     db.commit()
 
     # Envia dados de atualização via WebSocket
     await manager.broadcast(f"New reading: {reading}")
-    return RedirectResponse(url="/", status_code=200)
+    return JSONResponse(content={"message": "Registro criado com sucesso"})
+
 
 # Função para obter dados de resumo
 @app.get("/food-waste/summary")
-async def get_summary(db: SessionLocal = Depends(get_db)):
-    total_weight = db.query(func.sum(FoodReading.weight)).scalar() or 0
-    total_value = db.query(func.sum(FoodReading.weight * Food.price)).join(Food).scalar() or 0
-    total_transactions = db.query(FoodReading).count()
+async def get_summary(db: Session = Depends(get_db)):
+    total_weight = db.query(func.sum(Transaction.weight)).scalar() or 0
+    total_value = db.query(func.sum(Transaction.weight * Food.price)).join(Food).scalar() or 0
+    total_transactions = db.query(Transaction).count()
     return JSONResponse(content={
         "total_weight": total_weight,
         "total_value": total_value,
         "total_transactions": total_transactions
     })
 
-# Função para obter dados para gráficos
+
+from sqlalchemy.sql import func
+from fastapi.responses import JSONResponse
+
+# Função para obter dados para gráficos com total de custo incluído, agrupado por name e food_name
 @app.get("/food-waste/graph-data")
-async def get_graph_data(db: SessionLocal = Depends(get_db)):
-    results = db.query(
-        Food.food_name,
-        func.sum(FoodReading.weight).label("total_weight")
-    ).join(FoodReading).group_by(Food.food_name).all()
+async def get_graph_data(db: Session = Depends(get_db)):
+    # Realiza a consulta para obter o nome do alimento, nome do motivo e custo total para cada grupo
+    results = (
+        db.query(
+            Food.food_name,
+            Reason.name,  # Usa "name" como nome do motivo e o renomeia para "reason_name"
+            func.sum(Transaction.weight * Food.price).label("total_cost")
+        )
+        .select_from(Transaction)  # Define o ponto de partida da consulta
+        .join(Food, Food.food_id == Transaction.food_id)  # Faz o join explícito com Food
+        .join(Reason, Reason.reason_id == Transaction.reason_id)  # Faz o join explícito com Reason
+        .group_by(Food.food_name, Reason.name)  # Agrupa por food_name e name
+        .order_by(func.sum(Transaction.weight * Food.price).desc())  # Ordena pelo custo total em ordem decrescente
+        .all()
+    )
 
-    labels = [result.food_name for result in results]
-    data = [result.total_weight for result in results]
+    # Prepara os dados para retornar como JSON
+    graph_data = [
+        {"food_name": result.food_name, "label": result.name, "total_cost": result.total_cost}
+        for result in results
+    ]
 
-    return JSONResponse(content={"labels": labels, "data": data})
+    # Retorna o JSON com a estrutura solicitada
+    return JSONResponse(content={"data": graph_data})
 
-# Função para filtro por data
-@app.get("/food-waste/filter-by-date")
-async def filter_by_date(
+
+
+
+
+
+@app.get("/food-waste/reasons")
+async def get_reasons(db: Session = Depends(get_db)):
+
+    lista_de_motivos = db.query(Reason).all()
+    lista_de_motivos = [motivo.__dict__ for motivo in lista_de_motivos]
+    
+    for motivo in lista_de_motivos:
+        motivo.pop('_sa_instance_state')
+    # faca um dicionario para mandar de nome : id
+    dict_motivos = {motivo['name']: motivo['reason_id'] for motivo in lista_de_motivos}
+
+
+    return JSONResponse(content={
+        "reasons": dict_motivos
+    })
+
+@app.get("/food-waste/filter-by-date-and-reason")
+async def filter_by_date_and_reason(
     start_date: datetime = Query(..., description="Data de início do filtro"),
     end_date: datetime = Query(..., description="Data de término do filtro"),
-    db: SessionLocal = Depends(get_db)
+    reason_id: Optional[int] = Query(None, description="ID da categoria para filtrar as transações"),
+    db: Session = Depends(get_db)
 ):
-    # Busca leituras no intervalo de data
-    readings = db.query(FoodReading).filter(
-        FoodReading.date >= start_date,
-        FoodReading.date <= end_date
-    ).all()
+    # Verifica se as datas estão corretas
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="A data de início não pode ser maior que a data de término.")
+
     
+    # Inicia a consulta com o filtro de data
+    query = db.query(Transaction).filter(
+        Transaction.date >= start_date,
+        Transaction.date <= end_date
+    )
+
+    # Se reason_id for fornecido, adiciona o filtro correspondente
+    if reason_id is not None:
+        query = query.filter(Transaction.reason_id == reason_id)
+
+    # Executa a consulta
+    readings = query.all()
+
     # Verifica se há resultados
     if not readings:
         return JSONResponse(
@@ -172,23 +224,34 @@ async def filter_by_date(
                 "total_weight": 0,
                 "total_value": 0,
                 "total_transactions": 0,
-                "message": "Nenhum registro encontrado no intervalo especificado."
+                "message": "Nenhum registro encontrado para o intervalo e ID de categoria especificados."
             },
-            status_code=404
+            status_code=200
         )
     
-    # Calcula o resumo dos dados filtrados, ignorando valores None
     total_weight = sum(reading.weight for reading in readings if reading.weight is not None)
     total_value = sum((reading.weight or 0) * (reading.food.price or 0) for reading in readings if reading.food)
     total_transactions = len(readings)
 
-    # Retorna os dados no formato JSON similar ao `get_summary`
     return JSONResponse(content={
         "total_weight": total_weight,
         "total_value": total_value,
         "total_transactions": total_transactions
     })
 
+@app.get("/food-waste/foods")
+async def get_foods(db: Session = Depends(get_db)):     
+    lista_de_alimentos = db.query(Food).all()
+    lista_de_alimentos = [alimento.__dict__ for alimento in lista_de_alimentos]
+    
+    for alimento in lista_de_alimentos:
+        alimento.pop('_sa_instance_state')
+        # Adiciona o caminho completo da imagem
+
+    print(lista_de_alimentos)
+    return JSONResponse(content={
+        "foods": lista_de_alimentos
+    })
 
 
 # Função para ler dados da balança
@@ -222,6 +285,7 @@ def ler_dados_balança():
     finally:
         if ser.is_open:
             ser.close()
+
 
 # Inicia a thread para leitura da balança
 thread_balança = threading.Thread(target=ler_dados_balança)

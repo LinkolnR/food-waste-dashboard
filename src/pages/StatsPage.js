@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+
+import { useEffect, useState } from 'preact/hooks';
 import { Bar, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { useFood } from '../FoodContext';
@@ -12,8 +13,10 @@ const StatsPage = () => {
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
   const [summary, setSummary] = useState({ total_value: 0, total_weight: 0, total_transactions: 0 });
-  const [graphData, setGraphData] = useState({ labels: [], data: [] });
+  const [graphData, setGraphData] = useState({ labels: [], datasets: [] }); // Inicializando datasets como um array
   const [socketState, setSocketState] = useState(0);
+  const [reasonId, setReasonId] = useState('');
+  const [reasons, setReasons] = useState({});
 
   const fetchSummary = async () => {
     try {
@@ -29,33 +32,110 @@ const StatsPage = () => {
     try {
       const response = await fetch('http://127.0.0.1:8000/food-waste/graph-data');
       const data = await response.json();
-      setGraphData({ labels: data.labels, data: data.data });
+      console.log('Fetched graph data:', data);
+  
+      // Verificar se data.data existe e é um array
+      if (data.data && Array.isArray(data.data)) {
+        const labels = [...new Set(data.data.map(item => item.food_name))]; // Obter nomes únicos dos alimentos
+        
+        // Obter todos os motivos possíveis
+        const allReasons = [...new Set(data.data.map(item => item.label))]; 
+  
+        const reasonsData = {};
+  
+        // Agrupando os dados por food_name e reason_name
+        data.data.forEach(item => {
+          if (!reasonsData[item.food_name]) {
+            reasonsData[item.food_name] = {};
+            
+            // Inicializar todos os motivos com valor 0
+            allReasons.forEach(reason => {
+              reasonsData[item.food_name][reason] = 0;
+            });
+          }
+          reasonsData[item.food_name][item.label] = item.total_cost || 0; // Atualiza com o valor do motivo, se existir
+        });
+  
+        console.log('Reasons data:', reasonsData);
+  
+        // Criar datasets a partir dos dados agrupados
+        const datasets = Object.keys(reasonsData).map(food => {
+          return {
+            label: food,
+            data: Object.values(reasonsData[food]),
+            backgroundColor: getColorForReason(food), // Define uma cor baseada no motivo
+          };
+        });
+  
+        console.log('Graph data:', { labels, datasets });
+  
+        // Atualizar o estado do graphData
+        setGraphData({ labels: allReasons, datasets });
+      } else {
+        console.warn('No valid graph data received');
+        setGraphData({ labels: [], datasets: [] }); // Resetar caso não receba dados válidos
+      }
     } catch (error) {
       console.error('Error fetching graph data:', error);
+      setGraphData({ labels: [], datasets: [] }); // Resetar em caso de erro
+    }
+  };
+
+  const fetchReasons = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/food-waste/reasons');
+      const data = await response.json();
+      const data_reasons = data.reasons;
+      console.log('Fetched reasons:', data_reasons);
+      setReasons(data_reasons);
+    } catch (error) {
+      console.error('Error fetching reasons:', error);
     }
   };
 
   const handleDateChange = async () => {
     try {
-      const startISO = startDate.toISOString().slice(0, 19); // Pega até segundos no formato ISO
-      const endISO = endDate.toISOString().slice(0, 19);
-      console.log(" aqui las datas")
-      console.log(startISO, endISO);
-      const response = await fetch(
-        `http://127.0.0.1:8000/food-waste/filter-by-date?start_date=${startISO}&end_date=${endISO}`
-      );
+      const startISO = startDate.toISOString();
+      const endISO = endDate.toISOString();
+      let response;
+
+      if (!reasonId) {
+        response = await fetch(
+          `http://127.0.0.1:8000/food-waste/filter-by-date-and-reason?start_date=${startISO}&end_date=${endISO}`
+        );
+      } else {
+        response = await fetch(
+          `http://127.0.0.1:8000/food-waste/filter-by-date-and-reason?start_date=${startISO}&end_date=${endISO}&reason_id=${reasonId}`
+        );
+      }
+      
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      
       const data = await response.json();
-      console.log("aqui o data")
-      console.log(data)
       setSummary(data);
     } catch (error) {
       console.error('Error fetching summary:', error);
     }
   };
 
+  const getColorForReason = (reason) => {
+    // Você pode definir suas cores aqui
+    switch (reason) {
+      case 'Validade':
+        return 'rgba(255, 99, 132, 0.6)';
+      case 'Sobra':
+        return 'rgba(54, 162, 235, 0.6)';
+      case 'Resto':
+        return 'rgba(255, 206, 86, 0.6)';
+    }
+  };
+
   useEffect(() => {
     fetchSummary();
     fetchGraphData();
+    fetchReasons();
   }, [socketState]);
 
   useEffect(() => {
@@ -67,14 +147,8 @@ const StatsPage = () => {
   }, []);
 
   const dataBar = {
-    labels: graphData.labels,
-    datasets: [
-      {
-        label: 'Top Wasted Foods',
-        data: graphData.data,
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      },
-    ],
+    labels: graphData.labels, // As razões ou categorias
+    datasets: graphData.datasets, // Dados dos alimentos agrupados por razão
   };
 
   const dataLine = {
@@ -108,6 +182,15 @@ const StatsPage = () => {
           onChange={(date) => setEndDate(date)}
           dateFormat="yyyy-MM-dd"
         />
+        <label>Razão:</label>
+        <select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
+          <option value="">Selecione uma razão</option>
+          {Object.entries(reasons).map(([reason, reason_id]) => (
+            <option key={reason_id} value={reason_id}>
+              {reason}
+            </option>
+          ))}
+        </select>
         <button onClick={handleDateChange}>Buscar</button>
       </div>
 
@@ -128,7 +211,7 @@ const StatsPage = () => {
 
       <div className="charts-grid">
         <div className="chart">
-          <Bar data={dataBar} />
+          <Bar data={dataBar} options={{ responsive: true, scales: { y: { beginAtZero: true, stacked: false } } }} />
         </div>
         <div className="chart">
           <Line data={dataLine} />
