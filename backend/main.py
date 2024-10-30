@@ -171,6 +171,36 @@ async def get_graph_data(db: Session = Depends(get_db)):
     # Retorna o JSON com a estrutura solicitada
     return JSONResponse(content={"data": graph_data})
 
+# Função para obter dados para gráficos com total de custo incluído, agrupado por name e food_name
+@app.get("/food-waste/co2_emission")
+async def get_top_co2_emitting_foods(db: Session = Depends(get_db)):
+    try:
+        # Realiza a consulta para obter o nome do alimento e a soma de CO₂ emitido
+        results = (
+            db.query(
+                Food.food_name,
+                func.sum(Food.co2_emission).label("total_co2_emission")
+            )
+            .join(Transaction, Food.food_id == Transaction.food_id)
+            .group_by(Food.food_name)
+            .order_by(func.sum(Food.co2_emission).desc())  # Ordena pela soma de CO₂ em ordem decrescente
+            .limit(5)  # Limita para os 5 alimentos com maior emissão de CO₂
+            .all()
+        )
+
+        # Prepara os dados para retornar como JSON
+        co2_data = [
+            {"food_name": result.food_name, "total_co2_emission": result.total_co2_emission}
+            for result in results
+        ]
+        print(co2_data)
+        # Retorna o JSON com a estrutura solicitada
+        return JSONResponse(content={"data": co2_data})
+    
+    except Exception as e:
+        print("Error fetching CO₂ emissions data:", e)
+        raise HTTPException(status_code=500, detail="Error fetching CO₂ emissions data")
+
 
 
 

@@ -34,7 +34,7 @@ function App() {
   return (
     <FoodProvider>
       <Router>
-        <Header />
+        <Header/>
         <Routes>
           <Route path="/" element={<SelectPage />} /> {/* Altere a rota */}
           <Route path="/stats" element={<StatsPage />} />

@@ -1,21 +1,37 @@
-// src/components/Header.js
-import React from 'react';
+import React, { useState } from 'react';
+import './Header.css'; // Certifique-se de ter este arquivo CSS
 
-const Header = () => {
+export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const navigateTo = (path) => {
+    window.location.href = path; // Redireciona para a nova URL
+  };
+
   return (
-    <header>
-      <h1>Ecocina</h1>
-      <nav>
-        <select onChange={(e) => (window.location.href = e.target.value)}>
-          <option value="/">Home</option>
-          <option value="/stats">Status</option>
-          <option value="/add">Adicionar</option>
-          <option value="/select">Selecionar</option>
-
-        </select>
-      </nav>
+    <header className="header">
+      <div className="menu-container">
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="menu-button"
+        >
+          ☰
+        </button>
+        {isMenuOpen && (
+          <nav className="nav">
+            <select
+              onChange={(e) => navigateTo(e.target.value)}
+              className="select"
+            >
+              <option value="/">Home</option>
+              <option value="/stats">Status</option>
+              <option value="/add">Adicionar</option>
+              <option value="/select">Selecionar</option>
+            </select>
+          </nav>
+        )}
+      </div>
+      <h1 className="title">Ecocina</h1>
     </header>
   );
-};
-
-export default Header;
+}

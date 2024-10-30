@@ -10,6 +10,7 @@ class Food(Base):
     food_id = Column(Integer, primary_key=True, index=True)
     food_name = Column(String, unique=True, index=True)
     price = Column(Float)
+    co2_emission = Column(Float)
     image = Column(String)
 
     # Relacionamento com Transaction

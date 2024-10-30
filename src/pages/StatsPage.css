@@ -1,78 +1,138 @@
 .dashboard-container {
-    padding: 20px;
+  padding: 1em;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1em;
+  margin-bottom: 1.5em;
+}
+
+.filters label, .filters select, .filters button {
+  font-size: 1em;
+  margin: 0.5em 0;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 2em;
+  text-align: center;
+}
+
+.stat-card {
+  flex: 1;
+  padding: 1em;
+  background-color: #f7f7f7;
+  border-radius: 5px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 2em; /* Espaço entre os gráficos */
+}
+
+.chart {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .charts {
+    grid-template-columns: 1fr 1fr;
   }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .alert {
-    background-color: purple;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-  }
-  
-  .stats-grid {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-  }
-  
-  .stat-card {
-    background-color: #f4f4f4;
-    padding: 20px;
-    flex: 1;
-    margin: 0 10px;
-    text-align: center;
-    border-radius: 10px;
-  }
-  
-  .charts-grid {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 40px;
-  }
-  
+
   .chart {
-    flex: 1;
-    margin: 0 10px;
+    height: 400px;
   }
-  
-  .photo-stream {
-    margin-top: 40px;
-  }
-  
-  .photos {
-    display: flex;
-    justify-content: space-around;
-  }
-  
-  .photos img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-  
-  @media (max-width: 768px) {
-    .stats-grid, .charts-grid {
-      flex-direction: column;
-    }
-  
-    .stat-card, .chart {
-      margin: 10px 0;
-    }
-  
-    .photos {
-      flex-direction: column;
-      align-items: center;
-    }
-  
-    .photos img {
-      margin-bottom: 10px;
-    }
-  }
-  
+}
+
+.photo-stream {
+  margin-top: 2em;
+  text-align: center;
+}
+
+.photos {
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  flex-wrap: wrap;
+}
+
+.photos img {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+}
+
+
+
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centraliza o título e o gráfico */
+}
+
+.chart {
+  width: 100%; /* Certifique-se de que o gráfico use a largura disponível */
+  height: 300px; /* Defina uma altura adequada para o gráfico */
+}
+
+
+.filters {
+  display: flex;
+  justify-content: space-between; /* Distribui os elementos com espaço igual */
+  align-items: center; /* Alinha os itens verticalmente ao centro */
+  gap: 10px; /* Espaçamento entre os grupos de filtros */
+  font-size: large;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: row; /* Alinha o label e o componente na horizontal */
+  align-items: center; /* Alinha verticalmente no centro */
+  flex: 1; /* Faz cada grupo de filtro ocupar espaço igual */
+}
+
+label {
+  margin-right: 10px; /* Espaçamento entre o label e o componente */
+  width: 120px; /* Largura fixa para os labels */
+  font-size: 16px; /* Aumenta o tamanho da fonte do label */
+}
+
+select,
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  font-size: 16px; /* Aumenta o tamanho da fonte do DatePicker e do select */
+  padding: 10px; /* Adiciona espaçamento interno */
+  margin-right: 10px; /* Espaçamento entre o select e o próximo elemento */
+  flex: 1; /* Faz o DatePicker e o select ocuparem espaço igual */
+}
+
+.submit-button {
+  width: auto; /* Largura automática */
+  max-width: 150px; /* Limita a largura máxima do botão */
+  padding: 10px 15px; /* Adiciona espaçamento interno */
+  align-self: flex-start; /* Alinha o botão ao início (à esquerda) */
+  cursor: pointer; /* Muda o cursor ao passar o mouse sobre o botão */
+  background-color: #007bff; /* Cor de fundo do botão */
+  color: white; /* Cor do texto */
+  border: none; /* Remove borda padrão */
+  border-radius: 5px; /* Borda arredondada */
+  font-size: 16px; /* Aumenta o tamanho da fonte do botão */
+  transition: background-color 0.3s; /* Animação de transição */
+}
+
+.submit-button:hover {
+  background-color: #0056b3; /* Cor ao passar o mouse */
+}

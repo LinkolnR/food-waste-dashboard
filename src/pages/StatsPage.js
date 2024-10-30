@@ -6,6 +6,7 @@ import { useFood } from '../FoodContext';
 import './StatsPage.css';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { fi } from 'date-fns/locale';
 
 ChartJS.register(...registerables);
 
@@ -17,11 +18,14 @@ const StatsPage = () => {
   const [socketState, setSocketState] = useState(0);
   const [reasonId, setReasonId] = useState('');
   const [reasons, setReasons] = useState({});
+  const [co2GraphData, setCo2GraphData] = useState({ labels: [], datasets: [] });
+
 
   const fetchSummary = async () => {
     try {
       const response = await fetch('http://127.0.0.1:8000/food-waste/summary');
       const data = await response.json();
+      console.log('Fetched summary:', data);
       setSummary(data);
     } catch (error) {
       console.error('Error fetching summary:', error);
@@ -31,55 +35,96 @@ const StatsPage = () => {
   const fetchGraphData = async () => {
     try {
       const response = await fetch('http://127.0.0.1:8000/food-waste/graph-data');
+      const co2_response = await fetch('http://127.0.0.1:8000/food-waste/co2_emission');
+      const data_co2 = await co2_response.json();
       const data = await response.json();
+      console.log('Fetched CO2 data:', data_co2);
       console.log('Fetched graph data:', data);
   
-      // Verificar se data.data existe e é um array
       if (data.data && Array.isArray(data.data)) {
-        const labels = [...new Set(data.data.map(item => item.food_name))]; // Obter nomes únicos dos alimentos
-        
-        // Obter todos os motivos possíveis
-        const allReasons = [...new Set(data.data.map(item => item.label))]; 
+        // Motivos e categorias fixas para manter a ordem e garantir a presença
+        const fixedReasons = ["Validade", "Sobra", "Resto"];
+  
+        // Obter nomes únicos dos alimentos e manter grafia consistente
+        const labels = [...new Set(data.data.map(item => item.food_name))];
   
         const reasonsData = {};
+        const co2Data = {}; // Objeto para armazenar o impacto de CO₂
   
-        // Agrupando os dados por food_name e reason_name
+        // Agrupar dados por food_name e reason_name
         data.data.forEach(item => {
           if (!reasonsData[item.food_name]) {
-            reasonsData[item.food_name] = {};
-            
-            // Inicializar todos os motivos com valor 0
-            allReasons.forEach(reason => {
-              reasonsData[item.food_name][reason] = 0;
-            });
+            reasonsData[item.food_name] = { "Validade": 0, "Sobra": 0, "Resto": 0 }; // Inicializar valores com 0
           }
-          reasonsData[item.food_name][item.label] = item.total_cost || 0; // Atualiza com o valor do motivo, se existir
+          reasonsData[item.food_name][item.label] = item.total_cost || 0;
         });
   
         console.log('Reasons data:', reasonsData);
   
-        // Criar datasets a partir dos dados agrupados
-        const datasets = Object.keys(reasonsData).map(food => {
-          return {
-            label: food,
-            data: Object.values(reasonsData[food]),
-            backgroundColor: getColorForReason(food), // Define uma cor baseada no motivo
-          };
-        });
+        // Configurar datasets
+        const datasets = labels.map(food => ({
+          label: food,
+          data: fixedReasons.map(reason => reasonsData[food][reason] || 0), // Garantir ordem fixa
+          backgroundColor: getColorForReason(food),
+          borderColor: getColorForReason(food),
+          borderWidth: 1,
+        }));
+        
+        // Corrige o acesso ao array real dentro de "data"
+    if (data_co2.data && Array.isArray(data_co2.data)) {
+      const labels = data_co2.data.map(item => item.food_name);
+      const dataValues = data_co2.data.map(item => item.total_co2_emission);
+
+      var co2Dataset = {
+        labels,
+        datasets: [
+          {
+            label: 'CO₂ Emission (kg)',
+            data: dataValues,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+            fill: true,
+          }
+
+        ]
+      };
+
+      // const co2Dataset = {
+      //   labels,
+      //   datasets: [
+      //     {
+      //       label: "Impacto de CO₂ (kg CO₂/kg)",
+      //       data:  data_co2.map(item => item.co2_emission),
+      //       borderColor: 'rgba(75, 192, 192, 1)',
+      //       backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      //       fill: true,
+      //     },
+      //   ],
+      // };
+
+      // Atualiza o estado do graphData
+      setGraphData({ labels, datasets });
+    }
   
-        console.log('Graph data:', { labels, datasets });
+        
+
+        console.log('CO2 dataset:', co2Dataset);   
   
-        // Atualizar o estado do graphData
-        setGraphData({ labels: allReasons, datasets });
+        setGraphData({ labels: fixedReasons, datasets });
+        setCo2GraphData(co2Dataset); // Novo estado para o gráfico de CO₂
       } else {
         console.warn('No valid graph data received');
-        setGraphData({ labels: [], datasets: [] }); // Resetar caso não receba dados válidos
+        setGraphData({ labels: [], datasets: [] });
+        setCo2GraphData({ labels: [], datasets: [] });
       }
     } catch (error) {
       console.error('Error fetching graph data:', error);
-      setGraphData({ labels: [], datasets: [] }); // Resetar em caso de erro
+      setGraphData({ labels: [], datasets: [] });
+      setCo2GraphData({ labels: [], datasets: [] });
     }
   };
+  
 
   const fetchReasons = async () => {
     try {
@@ -151,84 +196,130 @@ const StatsPage = () => {
     datasets: graphData.datasets, // Dados dos alimentos agrupados por razão
   };
 
-  const dataLine = {
-    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
-    datasets: [
-      {
-        label: 'Top Loss Reasons',
-        data: [500, 700, 900, 650, 400],
-        borderColor: 'rgba(153, 102, 255, 1)',
-        fill: false,
-      },
-    ],
-  };
 
   return (
     <div className="dashboard-container">
-      <div className="header">
-        <h1>Dashboard Desperdício</h1>
+      <header className="header">
+        <h1>DashBoard Descarte de Comida</h1>
+      </header>
+
+      <div className="filters">
+
+
+
+              <div className="filter-group">
+          <label>Data Inicial:</label>
+          <DatePicker
+            selected={startDate}
+            onChange={(date) => setStartDate(date)}
+            dateFormat="dd-MM-yyyy"
+          />
+        </div>
+
+        <div className="filter-group">
+          <label>Data Final:</label>
+          <DatePicker
+            selected={endDate}
+            onChange={(date) => setEndDate(date)}
+            dateFormat="dd-MM-yyyy"
+          />
+        </div>
+          
+        
+        
+          <div className="filter-group">
+            <label>Motivo:</label>
+            <select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
+              <option value="">Selecione um motivo</option>
+              {Object.entries(reasons).map(([reason, reason_id]) => (
+                <option key={reason_id} value={reason_id}>
+                  {reason}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <button className="submit-button"   onClick={handleDateChange}>Submit</button>
       </div>
 
-      <div className="date-picker-container">
-        <label>Data de Início:</label>
-        <DatePicker
-          selected={startDate}
-          onChange={(date) => setStartDate(date)}
-          dateFormat="yyyy-MM-dd"
-        />
-        <label>Data de Fim:</label>
-        <DatePicker
-          selected={endDate}
-          onChange={(date) => setEndDate(date)}
-          dateFormat="yyyy-MM-dd"
-        />
-        <label>Razão:</label>
-        <select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
-          <option value="">Selecione uma razão</option>
-          {Object.entries(reasons).map(([reason, reason_id]) => (
-            <option key={reason_id} value={reason_id}>
-              {reason}
-            </option>
-          ))}
-        </select>
-        <button onClick={handleDateChange}>Buscar</button>
-      </div>
-
-      <div className="stats-grid">
+      <div className="summary">
         <div className="stat-card">
-          <h2>Valor Desperdício</h2>
+          <h2>Valor do descarte</h2>
           <p>${summary.total_value.toFixed(2)}</p>
         </div>
         <div className="stat-card">
-          <h2>Peso Desperdiçado</h2>
+          <h2>Peso descartado</h2>
           <p>{summary.total_weight.toFixed(2)} KG</p>
         </div>
         <div className="stat-card">
-          <h2>Registros</h2>
+          <h2>Transações</h2>
           <p>{summary.total_transactions}</p>
         </div>
       </div>
 
-      <div className="charts-grid">
-        <div className="chart">
-          <Bar data={dataBar} options={{ responsive: true, scales: { y: { beginAtZero: true, stacked: false } } }} />
-        </div>
-        <div className="chart">
-          <Line data={dataLine} />
-        </div>
+      <div className="charts">
+  <div className="chart-container">
+    <h2>Descarte por motivo</h2>
+    <div className="chart">
+      <Bar 
+        data={dataBar} 
+        options={{ 
+          responsive: true, 
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: {
+                font: {
+                  size: 16, // Aumente o tamanho da fonte dos rótulos do eixo X
+                },
+              },
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16, // Aumente o tamanho da fonte dos rótulos do eixo Y
+                },
+              },
+            },
+          },
+        }} 
+      />
+    </div>
+  </div>
+
+  <div className="chart-container">
+    <h2>Pegada de CO₂ </h2>
+    <div className="chart">
+      <Bar 
+        data={co2GraphData} 
+        options={{ 
+          responsive: true, 
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: {
+                font: {
+                  size: 16, // Aumente o tamanho da fonte dos rótulos do eixo X
+                },
+              },
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16, // Aumente o tamanho da fonte dos rótulos do eixo Y
+                },
+              },
+            },
+          },
+        }} 
+      />
+    </div>
+  </div>
       </div>
 
-      <div className="photo-stream">
-        <h2>Photo Stream</h2>
-        <div className="photos">
-          <img src="https://via.placeholder.com/100" alt="Food 1" />
-          <img src="https://via.placeholder.com/100" alt="Food 2" />
-          <img src="https://via.placeholder.com/100" alt="Food 3" />
-          <img src="https://via.placeholder.com/100" alt="Food 4" />
-        </div>
-      </div>
     </div>
   );
 };
+
 
 export default StatsPage;

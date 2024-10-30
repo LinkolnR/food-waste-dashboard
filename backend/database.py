@@ -31,9 +31,9 @@ def initialize_data(db: Session):
     if db.query(Food).count() == 0:
         # Dados iniciais para a tabela Food
         initial_foods = [
-            Food(food_id=1, food_name="Frango", price=20.00, image="frango.jpg"),
-            Food(food_id=2, food_name="Carne", price=35.00, image="carne.jpg"),
-            Food(food_id=3, food_name="Arroz", price=7.00, image="arroz.jpg"),
+            Food(food_id=1, food_name="Frango", price=20.00, image="frango.jpg", co2_emission=6.5),
+            Food(food_id=2, food_name="Carne", price=35.00, image="carne.jpg", co2_emission=60.0),
+            Food(food_id=3, food_name="Arroz", price=7.00, image="arroz.jpg", co2_emission=2.5),
         ]
         db.add_all(initial_foods)
         db.commit()
